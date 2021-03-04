@@ -13,7 +13,7 @@ PersistenceMiddleware provides a transaction per request
 */
 func PersistenceMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		_, t := NewTransaction(db)
+		_, t := NewTransaction(ctx, db)
 		defer t.Close()
 		ctx.Set("tx", t)
 		ctx.Next()

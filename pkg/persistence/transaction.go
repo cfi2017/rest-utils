@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"sync"
 )
@@ -25,7 +26,7 @@ func (t *Transaction) Fail() {
 	t.rollback = true
 }
 
-func NewTransaction(db *gorm.DB) (*gorm.DB, *Transaction) {
-	tx := db.Begin()
+func NewTransaction(ctx *gin.Context, db *gorm.DB) (*gorm.DB, *Transaction) {
+	tx := db.WithContext(ctx).Begin()
 	return tx, &Transaction{Tx: tx}
 }
