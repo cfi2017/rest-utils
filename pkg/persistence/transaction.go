@@ -26,6 +26,6 @@ func (t *Transaction) Fail() {
 }
 
 func NewTransaction(db *gorm.DB) (*gorm.DB, *Transaction) {
-	db = db.Begin()
-	return db, &Transaction{Tx: db}
+	tx := db.Begin()
+	return tx, &Transaction{Tx: tx}
 }

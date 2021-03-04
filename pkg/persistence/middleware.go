@@ -8,6 +8,9 @@ import (
 	"strconv"
 )
 
+/*
+PersistenceMiddleware provides a transaction per request
+*/
 func PersistenceMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		_, t := NewTransaction(db)
@@ -70,6 +73,7 @@ func EntityMiddleware(param string, entity interface{}, opts *EntityMiddlewareOp
 			}
 		} else {
 			c.Set("entity", entity)
+			c.Next()
 		}
 	}
 }
