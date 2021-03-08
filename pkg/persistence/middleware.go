@@ -47,15 +47,21 @@ func EntityMiddleware(c *gin.Context, id string, entity interface{}, opts *Entit
 			}
 		}
 		continueOnError = opts.ContinueOnError
-		if opts.StaticHandler != nil {
-			e, ok, err := opts.StaticHandler(c, tx, id)
-			if err != nil && !continueOnError {
-				_ = c.AbortWithError(500, err)
-				return
-			}
-			if ok {
-				c.Set("entity", e)
-				return
+		if opts.StaticPaths != nil {
+			for _, path := range opts.StaticPaths {
+				if path == id {
+					entity, err := opts.StaticHandler(c, tx, id)
+					if err != nil {
+						_ = c.Error(err)
+						if !opts.ContinueOnError {
+							c.Abort()
+							return
+						}
+						return
+					}
+					c.Set("entity", entity)
+					return
+				}
 			}
 		}
 	}
