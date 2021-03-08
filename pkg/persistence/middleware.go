@@ -29,10 +29,13 @@ func FailTx(ctx *gin.Context) {
 	t.Fail()
 }
 
+type StaticHandler func(c *gin.Context, tx *gorm.DB, id string) (entity interface{}, err error)
+
 type EntityMiddlewareOpts struct {
 	Preloads        []string
 	ContinueOnError bool
-	StaticHandler   func(c *gin.Context, tx *gorm.DB, id string) (entity interface{}, matches bool, err error)
+	StaticHandler   StaticHandler
+	StaticPaths     []string
 }
 
 func EntityMiddleware(param string, entity interface{}, opts *EntityMiddlewareOpts) gin.HandlerFunc {
@@ -47,15 +50,17 @@ func EntityMiddleware(param string, entity interface{}, opts *EntityMiddlewareOp
 				}
 			}
 			continueOnError = opts.ContinueOnError
-			if opts.StaticHandler != nil {
-				e, ok, err := opts.StaticHandler(c, tx, id)
-				if err != nil && !continueOnError {
-					_ = c.AbortWithError(500, err)
-					return
-				}
-				if ok {
-					c.Set("entity", e)
-					return
+			if opts.StaticPaths != nil {
+				for _, path := range opts.StaticPaths {
+					if id == path {
+						entity, err := opts.StaticHandler(c, tx, id)
+						if err != nil {
+							_ = c.AbortWithError(500, err)
+							return
+						}
+						c.Set("entity", entity)
+						break
+					}
 				}
 			}
 		}
