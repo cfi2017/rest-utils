@@ -28,7 +28,7 @@ func FailTx(ctx *gin.Context) {
 	t.Fail()
 }
 
-type StaticHandler func(c *gin.Context, tx *gorm.DB, id string) (entity interface{}, err error)
+type StaticHandler func(c *gin.Context, tx *gorm.DB, id interface{}) (entity interface{}, err error)
 
 type EntityMiddlewareOpts struct {
 	Preloads        []string
@@ -37,7 +37,7 @@ type EntityMiddlewareOpts struct {
 	StaticPaths     []string
 }
 
-func EntityMiddleware(c *gin.Context, id string, entity interface{}, opts *EntityMiddlewareOpts) {
+func EntityMiddleware(c *gin.Context, id interface{}, entity interface{}, opts *EntityMiddlewareOpts) {
 	tx := GetTx(c)
 	var continueOnError bool
 	if opts != nil {
@@ -65,7 +65,15 @@ func EntityMiddleware(c *gin.Context, id string, entity interface{}, opts *Entit
 			}
 		}
 	}
-	if err := tx.First(entity, id).Error; err != nil && !continueOnError {
+	var err error
+	if _, ok := id.(string); ok {
+		// string id
+		err = tx.First(entity, "id = ?", id).Error
+	} else {
+		// numerical id
+		err = tx.First(entity, id).Error
+	}
+	if err != nil && !continueOnError {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatusJSON(404, util.NewErrorResponse("could not find object", util.ErrorCodeNotFound))
 		} else {
