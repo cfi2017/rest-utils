@@ -5,18 +5,17 @@ import (
 	"github.com/cfi2017/rest-utils/pkg/util"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"strconv"
 )
 
 /*
 PersistenceMiddleware provides a transaction per request
 */
 func PersistenceMiddleware(db *gorm.DB) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		_, t := NewTransaction(db)
+	return func(c *gin.Context) {
+		_, t := NewTransaction(db.WithContext(c))
 		defer t.Close()
-		ctx.Set("tx", t)
-		ctx.Next()
+		c.Set("tx", t)
+		c.Next()
 	}
 }
 
@@ -38,48 +37,38 @@ type EntityMiddlewareOpts struct {
 	StaticPaths     []string
 }
 
-func EntityMiddleware(param string, entity interface{}, opts *EntityMiddlewareOpts) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tx := GetTx(c)
-		id := c.Param(param)
-		var continueOnError bool
-		if opts != nil {
-			if opts.Preloads != nil {
-				for _, p := range opts.Preloads {
-					tx = tx.Preload(p)
-				}
-			}
-			continueOnError = opts.ContinueOnError
-			if opts.StaticPaths != nil {
-				for _, path := range opts.StaticPaths {
-					if id == path {
-						entity, err := opts.StaticHandler(c, tx, id)
-						if err != nil {
-							_ = c.AbortWithError(500, err)
-							return
-						}
-						c.Set("entity", entity)
-						break
-					}
-				}
+func EntityMiddleware(c *gin.Context, id string, entity interface{}, opts *EntityMiddlewareOpts) {
+	tx := GetTx(c)
+	var continueOnError bool
+	if opts != nil {
+		if opts.Preloads != nil {
+			for _, p := range opts.Preloads {
+				tx.Preload(p)
 			}
 		}
-		idx, err := strconv.Atoi(id)
-		if err != nil {
-			c.AbortWithStatusJSON(400, util.NewErrorResponse("invalid id", util.ErrorCodeBadRequest))
-			return
-		}
-		if err := tx.First(entity, idx).Error; err != nil && !continueOnError {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.AbortWithStatusJSON(404, util.NewErrorResponse("could not find object", util.ErrorCodeNotFound))
-			} else {
+		continueOnError = opts.ContinueOnError
+		if opts.StaticHandler != nil {
+			e, ok, err := opts.StaticHandler(c, tx, id)
+			if err != nil && !continueOnError {
 				_ = c.AbortWithError(500, err)
 				return
 			}
-		} else {
-			c.Set("entity", entity)
-			c.Next()
+			if ok {
+				c.Set("entity", e)
+				return
+			}
 		}
+	}
+	if err := tx.First(entity, id).Error; err != nil && !continueOnError {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.AbortWithStatusJSON(404, util.NewErrorResponse("could not find object", util.ErrorCodeNotFound))
+		} else {
+			_ = c.AbortWithError(500, err)
+			return
+		}
+	} else {
+		c.Set("entity", entity)
+		c.Next()
 	}
 }
 
