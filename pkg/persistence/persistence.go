@@ -16,7 +16,7 @@ import (
 // db.host - host
 // db.database - database
 // db.port - port (numeric)
-func InitialisePersistence(models ...interface{}) (*gorm.DB, error) {
+func InitialisePersistence(config *gorm.Config, models ...interface{}) (*gorm.DB, error) {
 
 	var (
 		username = viper.GetString("db.username")
@@ -29,7 +29,7 @@ func InitialisePersistence(models ...interface{}) (*gorm.DB, error) {
 	dialector := postgres.Open(dsn)
 
 	// format dsn based on above values
-	db, err := gorm.Open(dialector, &gorm.Config{})
+	db, err := gorm.Open(dialector, config)
 	if err != nil {
 		return nil, err
 	}
