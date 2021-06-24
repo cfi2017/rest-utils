@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// NewPostgresDialector initialises a new dialector for a postgres database using a set of pre-defined config variables.
 func NewPostgresDialector() gorm.Dialector {
 	var (
 		username = viper.GetString("db.username")
