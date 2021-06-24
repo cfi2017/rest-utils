@@ -8,16 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// InitialisePersistence creates a new database connection using config variables.
-//
-// The available variables are:
-// db.username - username
-// db.password - password
-// db.host - host
-// db.database - database
-// db.port - port (numeric)
-func InitialisePersistence(config *gorm.Config, models ...interface{}) (*gorm.DB, error) {
-
+func NewPostgresDialector() gorm.Dialector {
 	var (
 		username = viper.GetString("db.username")
 		password = viper.GetString("db.password")
@@ -27,6 +18,18 @@ func InitialisePersistence(config *gorm.Config, models ...interface{}) (*gorm.DB
 	)
 	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable", host, port, username, database, password)
 	dialector := postgres.Open(dsn)
+	return dialector
+}
+
+// InitialisePersistence creates a new database connection using config variables.
+//
+// The available variables are:
+// db.username - username
+// db.password - password
+// db.host - host
+// db.database - database
+// db.port - port (numeric)
+func InitialisePersistence(dialector gorm.Dialector, config *gorm.Config, models ...interface{}) (*gorm.DB, error) {
 
 	// format dsn based on above values
 	db, err := gorm.Open(dialector, config)
